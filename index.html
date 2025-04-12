@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis AI</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Satisfy&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .container {
+            text-align: center;
+            z-index: 10;
+            padding: 2rem;
+            max-width: 100%;
+        }
+        
+        .artemis-title {
+            margin-bottom: 1rem;
+            font-size: 3rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, #f9a8d4 0%, #c4b5fd 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 1s ease-out forwards 0.2s;
+        }
+        
+        .artemis-title span {
+            font-family: 'Satisfy', cursive;
+            font-weight: 400;
+        }
+        
+        .prompt {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 1s ease-out forwards 0.5s;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .prompt span {
+            font-family: 'Satisfy', cursive;
+            color: #f9a8d4;
+            font-size: 1.7rem;
+        }
+        
+        .canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .status-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            opacity: 0;
+            animation: pulse 2s infinite;
+            z-index: 10;
+        }
+        
+        .design-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(249, 168, 212, 0.7);
+            opacity: 0;
+            z-index: 20;
+            text-align: center;
+            transition: opacity 1s ease;
+            display: none;
+        }
+        
+        .pastel-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            z-index: 0;
+        }
+        
+        .glow-1 {
+            background: radial-gradient(circle, #f9a8d4 0%, transparent 70%);
+            top: 10%;
+            left: 20%;
+            animation: floatAnimation 8s infinite alternate ease-in-out;
+        }
+        
+        .glow-2 {
+            background: radial-gradient(circle, #c4b5fd 0%, transparent 70%);
+            bottom: 10%;
+            right: 20%;
+            animation: floatAnimation 12s infinite alternate-reverse ease-in-out;
+        }
+        
+        .glow-3 {
+            background: radial-gradient(circle, #93c5fd 0%, transparent 70%);
+            top: 50%;
+            right: 30%;
+            animation: floatAnimation 10s infinite alternate ease-in-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+            50% {
+                opacity: 0.8;
+            }
+            100% {
+                opacity: 0.4;
+            }
+        }
+        
+        @keyframes floatAnimation {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(30px, 20px);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .artemis-title {
+                font-size: 2.5rem;
+            }
+            
+            .prompt {
+                font-size: 1.2rem;
+                padding: 0 1rem;
+            }
+            
+            .prompt span {
+                font-size: 1.4rem;
+            }
+            
+            .design-message {
+                font-size: 1.4rem;
+                padding: 0 1rem;
+            }
+            
+            .pastel-glow {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="pastel-glow glow-1"></div>
+    <div class="pastel-glow glow-2"></div>
+    <div class="pastel-glow glow-3"></div>
+    
+    <div class="canvas-container" id="scene-container"></div>
+    
+    <div class="container">
+        <h1 class="artemis-title"><span>Artemis</span> AI</h1>
+        <p class="prompt" id="prompt-text">Listening... Say "<span>How can I help you, ma'am?</span>"</p>
+    </div>
+    
+    <div class="design-message" id="design-message">Designing the smart menstrual cup with smart case</div>
+    
+    <div class="status-indicator" id="status">Voice recognition ready</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Three.js Scene Setup
+        const container = document.getElementById('scene-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 20;
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 10, 10);
+        scene.add(directionalLight);
+        
+        // Main sphere geometry
+        const sphereGeometry = new THREE.SphereGeometry(5, 64, 64);
+        const sphereMaterial = new THREE.MeshPhongMaterial({
+            color: 0x93c5fd,
+            emissive: 0x3b82f6,
+            specular: 0xffffff,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.9
+        });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        scene.add(sphere);
+        
+        // Outer glow effect
+        const glowGeometry = new THREE.SphereGeometry(5.2, 32, 32);
+        const glowMaterial = new THREE.MeshPhongMaterial({
+            color: 0xf9a8d4,
+            emissive: 0xf9a8d4,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.BackSide
+        });
+        const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
+        glowSphere.scale.multiplyScalar(1.2);
+        scene.add(glowSphere);
+        
+        // Particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particleCount = 1500; // Increased particles for better effect
+        
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        
+        for (let i = 0; i < particleCount * 3; i += 3) {
+            // Create particles in a spherical distribution
+            const radius = 7 + Math.random() * 8;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            
+            positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i + 2] = radius * Math.cos(phi);
+            
+            // Color gradient from blue to pink
+            const ratio = Math.random();
+            colors[i] = ratio * 0.98 + 0.02;         // R (pink)
+            colors[i + 1] = ratio * 0.7 + 0.3;       // G (mix)
+            colors[i + 2] = 1 - ratio * 0.5;         // B (blue)
+            
+            // Various particle sizes
+            sizes[i/3] = Math.random() * 0.1 + 0.05;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particlesGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.1,
+            transparent: true,
+            opacity: 0.8,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+        
+        const particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particleSystem);
+        
+        // Additional decorative particles for transition
+        const specialParticlesGeometry = new THREE.BufferGeometry();
+        const specialParticleCount = 200;
+        
+        const specialPositions = new Float32Array(specialParticleCount * 3);
+        const specialColors = new Float32Array(specialParticleCount * 3);
+        const specialSizes = new Float32Array(specialParticleCount);
+        
+        for (let i = 0; i < specialParticleCount * 3; i += 3) {
+            specialPositions[i] = (Math.random() - 0.5) * 50;
+            specialPositions[i + 1] = (Math.random() - 0.5) * 50;
+            specialPositions[i + 2] = (Math.random() - 0.5) * 50;
+            
+            // Pinks and purples for special particles
+            const pinkRatio = Math.random() * 0.3 + 0.7;
+            specialColors[i] = pinkRatio;      // Strong pink
+            specialColors[i + 1] = 0.3 + Math.random() * 0.3;
+            specialColors[i + 2] = 0.7 + Math.random() * 0.3;
+            
+            specialSizes[i/3] = Math.random() * 0.3 + 0.1; // Larger special particles
+        }
+        
+        specialParticlesGeometry.setAttribute('position', new THREE.BufferAttribute(specialPositions, 3));
+        specialParticlesGeometry.setAttribute('color', new THREE.BufferAttribute(specialColors, 3));
+        specialParticlesGeometry.setAttribute('size', new THREE.BufferAttribute(specialSizes, 1));
+        
+        const specialParticlesMaterial = new THREE.PointsMaterial({
+            size: 0.2,
+            transparent: true,
+            opacity: 0,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+        
+        const specialParticleSystem = new THREE.Points(specialParticlesGeometry, specialParticlesMaterial);
+        scene.add(specialParticleSystem);
+        
+        // Animation state
+        let animationState = 'idle'; // 'idle', 'active', 'transition'
+        let portalScale = 0;
+        let pulseDirection = 1;
+        let particleSpeed = 1;
+        let specialParticleOpacity = 0;
+        let particleFlowDirection = 1;
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Rotate the main sphere slowly
+            sphere.rotation.y = time * 0.1;
+            glowSphere.rotation.y = time * -0.05;
+            
+            // Subtle pulse effect for the sphere
+            const pulseFactor = 1 + Math.sin(time) * 0.03;
+            sphere.scale.set(pulseFactor, pulseFactor, pulseFactor);
+            
+            // Animate particles
+            const positions = particleSystem.geometry.attributes.position.array;
+            
+            for (let i = 0; i < positions.length; i += 3) {
+                // Get current position
+                const x = positions[i];
+                const y = positions[i + 1];
+                const z = positions[i + 2];
+                
+                // Calculate distance from center
+                const distance = Math.sqrt(x * x + y * y + z * z);
+                
+                if (animationState === 'idle') {
+                    // Gentle swirling in idle state
+                    const angle = 0.002 * particleSpeed;
+                    const newX = x * Math.cos(angle) - z * Math.sin(angle);
+                    const newZ = x * Math.sin(angle) + z * Math.cos(angle);
+                    
+                    positions[i] = newX;
+                    positions[i + 2] = newZ;
+                    
+                    // Slight vertical oscillation
+                    positions[i + 1] = y + Math.sin(time * 2 + distance) * 0.01;
+                } 
+                else if (animationState === 'active') {
+                    // Faster swirling when active
+                    const angle = 0.01 * particleSpeed;
+                    const newX = x * Math.cos(angle) - z * Math.sin(angle);
+                    const newZ = x * Math.sin(angle) + z * Math.cos(angle);
+                    
+                    positions[i] = newX;
+                    positions[i + 2] = newZ;
+                    
+                    // More pronounced oscillation
+                    positions[i + 1] = y + Math.sin(time * 5 + distance) * 0.05;
+                    
+                    // Particles pulse brightness
+                    const colors = particleSystem.geometry.attributes.color.array;
+                    const colorIndex = (i / 3) * 3;
+                    const brightness = 0.7 + Math.sin(time * 5) * 0.3;
+                    colors[colorIndex] *= brightness;
+                    colors[colorIndex + 1] *= brightness;
+                    colors[colorIndex + 2] *= brightness;
+                    particleSystem.geometry.attributes.color.needsUpdate = true;
+                }
+                else if (animationState === 'transition') {
+                    // Create a flowing pattern effect
+                    const radius = 10 + Math.sin(time * 3 + i * 0.01) * 1.5;
+                    const theta = Math.atan2(z, x) + 0.02 * particleFlowDirection;
+                    const phi = Math.atan2(Math.sqrt(x*x + z*z), y) + Math.sin(time * 2 + i * 0.005) * 0.05;
+                    
+                    positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+                    positions[i + 1] = radius * Math.cos(phi) + Math.sin(time * 3 + i * 0.01) * 0.5;
+                    positions[i + 2] = radius * Math.sin(phi) * Math.sin(theta);
+                    
+                    // Enhanced color effects
+                    const colors = particleSystem.geometry.attributes.color.array;
+                    const colorIndex = (i / 3) * 3;
+                    const brightness = 1.2 + Math.sin(time * 8 + i * 0.01) * 0.3;
+                    const pinkRatio = 0.6 + Math.sin(time * 5 + i * 0.02) * 0.4; // More pink pulsing
+                    colors[colorIndex] = pinkRatio;
+                    colors[colorIndex + 1] = 0.5 + Math.sin(time * 6 + i * 0.02) * 0.2;
+                    colors[colorIndex + 2] = 0.9 - Math.sin(time * 7 + i * 0.01) * 0.3;
+                    
+                    // Make some particles glow brighter periodically
+                    if (Math.sin(time * 10 + i * 0.1) > 0.8) {
+                        colors[colorIndex] = 1;
+                        colors[colorIndex + 1] = 0.9;
+                        colors[colorIndex + 2] = 1;
+                    }
+                    
+                    particleSystem.geometry.attributes.color.needsUpdate = true;
+                    
+                    // Size pulsing
+                    const sizes = particleSystem.geometry.attributes.size.array;
+                    sizes[i/3] = (0.1 + Math.sin(time * 5 + i * 0.01) * 0.05) * (1 + portalScale * 0.5);
+                    particleSystem.geometry.attributes.size.needsUpdate = true;
+                    
+                    // Expand overall effect
+                    portalScale += 0.001;
+                    if (portalScale > 2) {
+                        window.location.href = "https://thebatman2007.github.io/Smart-Menstrual-Cup/main.html";
+                    }
+                }
+            }
+            
+            // Handle special particles animation during transition
+            if (animationState === 'transition') {
+                // Fade in special particles
+                if (specialParticleOpacity < 1) {
+                    specialParticleOpacity += 0.02;
+                    specialParticlesMaterial.opacity = specialParticleOpacity;
+                }
+                
+                // Animate special particles
+                const specialPositions = specialParticleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < specialPositions.length; i += 3) {
+                    // Flowing motion toward center, then outward
+                    const x = specialPositions[i];
+                    const y = specialPositions[i + 1];
+                    const z = specialPositions[i + 2];
+                    
+                    const dist = Math.sqrt(x*x + y*y + z*z);
+                    let factor = 1;
+                    
+                    // Create flowing stream effects
+                    if (dist > 25) {
+                        // Reset particles that go too far out
+                        specialPositions[i] = (Math.random() - 0.5) * 10;
+                        specialPositions[i + 1] = (Math.random() - 0.5) * 10;
+                        specialPositions[i + 2] = (Math.random() - 0.5) * 10;
+                    } else {
+                        // Swirl and flow
+                        const angle = 0.02;
+                        const newX = x * Math.cos(angle) - z * Math.sin(angle);
+                        const newZ = x * Math.sin(angle) + z * Math.cos(angle);
+                        
+                        specialPositions[i] = newX + Math.sin(time * 3 + i * 0.01) * 0.3;
+                        specialPositions[i + 1] = y + Math.cos(time * 2 + i * 0.01) * 0.3;
+                        specialPositions[i + 2] = newZ + Math.sin(time * 2.5 + i * 0.01) * 0.3;
+                        
+                        // Add velocity in certain direction
+                        if (i % 9 === 0) {
+                            specialPositions[i] += Math.sin(time * 5) * 0.2;
+                        } else if (i % 9 === 3) {
+                            specialPositions[i + 1] += Math.cos(time * 4) * 0.2;
+                        } else {
+                            specialPositions[i + 2] += Math.sin(time * 6) * 0.2;
+                        }
+                    }
+                    
+                    // Dynamic size and color changes
+                    const specialSizes = specialParticleSystem.geometry.attributes.size.array;
+                    specialSizes[i/3] = 0.2 + Math.sin(time * 4 + i * 0.05) * 0.15;
+                    
+                    const specialColors = specialParticleSystem.geometry.attributes.color.array;
+                    const colorIndex = (i / 3) * 3;
+                    const pinkPulse = 0.7 + Math.sin(time * 3 + i * 0.02) * 0.3;
+                    specialColors[colorIndex] = pinkPulse;
+                    specialColors[colorIndex + 1] = 0.3 + Math.sin(time * 4 + i * 0.02) * 0.2;
+                    specialColors[colorIndex + 2] = 0.8 + Math.sin(time * 5 + i * 0.02) * 0.2;
+                }
+                
+                specialParticleSystem.geometry.attributes.position.needsUpdate = true;
+                specialParticleSystem.geometry.attributes.size.needsUpdate = true;
+                specialParticleSystem.geometry.attributes.color.needsUpdate = true;
+            }
+            
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+            
+            // Adjust material properties based on state
+            if (animationState === 'active') {
+                // Brighter emissive for active state
+                sphereMaterial.emissive.setHex(0x60a5fa);
+                glowMaterial.emissive.setHex(0xfda4af);
+                
+                // Pulse size
+                const pulseMagnitude = Math.sin(time * 5) * 0.1;
+                glowSphere.scale.set(1.3 + pulseMagnitude, 1.3 + pulseMagnitude, 1.3 + pulseMagnitude);
+            } 
+            else if (animationState === 'transition') {
+                // Portal effect coloring
+                const portalBlue = new THREE.Color(0x3b82f6);
+                const portalPink = new THREE.Color(0xec4899);
+                const mixColor = new THREE.Color().lerpColors(portalBlue, portalPink, Math.sin(time * 10) * 0.5 + 0.5);
+                
+                sphereMaterial.emissive = mixColor;
+                sphereMaterial.emissiveIntensity = 2;
+                glowMaterial.emissive = mixColor;
+                glowMaterial.emissiveIntensity = 3;
+                
+                // Pulasating sphere effect
+                const pulseStrength = 1 + Math.sin(time * 8) * 0.2;
+                sphere.scale.set(pulseStrength + portalScale * 0.5, pulseStrength + portalScale * 0.5, pulseStrength + portalScale * 0.5);
+                glowSphere.scale.set(1.3 * pulseStrength + portalScale, 1.3 * pulseStrength + portalScale, 1.3 * pulseStrength + portalScale);
+            }
+            else {
+                // Default idle state
+                const pulseMagnitude = Math.sin(time * 2) * 0.05;
+                glowSphere.scale.set(1.2 + pulseMagnitude, 1.2 + pulseMagnitude, 1.2 + pulseMagnitude);
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Voice recognition
+        const statusElement = document.getElementById('status');
+        const promptText = document.getElementById('prompt-text');
+        const designMessage = document.getElementById('design-message');
+        let recognition = null;
+        let recognitionActive = false;
+        
+        function setupSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                statusElement.textContent = 'Voice recognition not supported in this browser';
+                statusElement.style.opacity = '1';
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onstart = function() {
+                recognitionActive = true;
+                statusElement.textContent = 'Listening...';
+                statusElement.style.opacity = '1';
+                animationState = 'idle';
+            };
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+                statusElement.textContent = `Heard: "${transcript}"`;
+                
+                if (transcript.includes('artemis, create a smart menstrual cup') || 
+                    transcript.includes('artemis create a smart menstrual cup')) {
+                    
+                    // First increase animation activity
+                    animationState = 'active';
+                    particleSpeed = 3;
+                    
+                    // Update status and hide prompt
+                    statusElement.textContent = 'Command recognized - preparing design';
+                    promptText.style.opacity = '0'; // Hide the prompt
+                    
+                    // After a delay, transition to portal effect with design message
+                    setTimeout(() => {
+                        animationState = 'transition';
+                        designMessage.style.display = 'block'; // Show design message
+                        setTimeout(() => {
+                            designMessage.style.opacity = '1'; // Fade in design message
+                        }, 100);
+                        
+                        // Stop recognition during transition
+                        if (recognitionActive) {
+                            recognition.stop();
+                            recognitionActive = false;
+                        }
+                    }, 1500);
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                statusElement.textContent = 'Error: ' + event.error;
+                statusElement.style.opacity = '1';
+                
+                // Don't try to restart if already active to avoid the error
+                if (event.error !== 'aborted' && !recognitionActive) {
+                    startRecognition();
+                }
+            };
+            
+            recognition.onend = function() {
+                recognitionActive = false;
+                
+                // Only restart if we're not in transition mode
+                if (animationState !== 'transition') {
+                    // Small delay before restarting to avoid conflicts
+                    setTimeout(() => {
+                        startRecognition();
+                    }, 300);
+                }
+            };
+            
+            // Start recognition initially
+            startRecognition();
+        }
+        
+        function startRecognition() {
+            if (!recognition || recognitionActive) return;
+            
+            try {
+                recognition.start();
+            } catch (e) {
+                statusElement.textContent = 'Click anywhere to enable voice recognition';
+                statusElement.style.opacity = '1';
+                
+                document.body.addEventListener('click', function() {
+                    if (!recognitionActive) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            statusElement.textContent = 'Voice recognition failed to start: ' + e.message;
+                        }
+                    }
+                }, { once: true });
+            }
+        }
+        
+        // Initialize
+        animate();
+        
+        // Start voice recognition after a short delay
+        window.addEventListener('load', () => {
+            setTimeout(setupSpeechRecognition, 1000);
+        });
+    </script>
+</body>
+</html>
